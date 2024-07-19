@@ -25,7 +25,7 @@ function addOptions(){
 }
 
 function changeModel(event){
-    selectedModel = event.target.value;
+    selectedModel = Number(event.target.value);
 }
 
 
@@ -51,10 +51,22 @@ async function setupVideoStream() {
 
 async function loadPoseNet() {
   const net = await posenet.load();
-  return net;
+  
+  const model = handPoseDetection.SupportedModels.MediaPipeHands;
+  const detectorConfig = {
+    runtime: 'mediapipe',
+    solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands'
+                  // or 'base/node_modules/@mediapipe/hands' in npm.
+  };
+  const detector = await handPoseDetection.createDetector(model, detectorConfig);
+  
+  return {
+    posenet: net,
+    handPoseDetector: detector
+  };
 }
 
-async function detectPoseInRealTime(video, net) {
+async function detectPoseInRealTime(video, detectors) {
   const canvas = document.getElementById('sketch');
   const ctx = canvas.getContext('2d');
 
@@ -63,7 +75,7 @@ async function detectPoseInRealTime(video, net) {
 
   async function poseDetectionFrame() {
 
-    switch(Number(selectedModel)){
+    switch(selectedModel){
         case Models.PlainVideo:
             break;
         case Models.SimpleFaceDetection:
@@ -71,12 +83,15 @@ async function detectPoseInRealTime(video, net) {
         case Models.FaceLandMarkDetection:
             break;
         case Models.PoseDetection:
-            const pose = await net.estimateSinglePose(video);
+            const pose = await detectors.posenet.estimateMultiplePoses(video);
             drawPose(pose, ctx);
             break;
         case Models.BodySegmentation:
             break;
         case Models.HandPoseDetection:
+            const handpose = await detectors.handPoseDetector.estimateHands(video);
+            console.log(handpose);
+            drawHands(handpose,ctx);
             break;
         case Models.PortraitDepthEstimation:
             break;
@@ -86,13 +101,63 @@ async function detectPoseInRealTime(video, net) {
   poseDetectionFrame();
 }
 
-function drawPose(pose, ctx) {
+function drawHands(hands, ctx){
+
+    const fingerJoints = {
+        thumb: [0, 1, 2, 3, 4],
+        indexFinger: [0, 5, 6, 7, 8],
+        middleFinger: [0, 9, 10, 11, 12],
+        ringFinger: [0, 13, 14, 15, 16],
+        pinkyFinger: [0, 17, 18, 19, 20]
+    }
+
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    function drawHandPoints(hand){
+        ctx.fillStyle = 'red';
+        hand.keypoints.forEach(keypoints => {
+        ctx.beginPath();
+        ctx.arc(keypoints.x, keypoints.y, 5, 0, 2 * Math.PI);
+        ctx.fill();
+        });
+    }
+
+    function drawAdjacentLines(hand){
+          // Draw lines between adjacent points
+          const keypoints = hand.keypoints;
+          ctx.strokeStyle = 'blue';
+          ctx.lineWidth = 2;
+          for (const [key, value] of Object.entries(fingerJoints)) {
+            for (let k = 0; k < fingerJoints[key].length-1; k++) {
+                const firstJointIndex = fingerJoints[key][k];
+                const secondJointIndex = fingerJoints[key][k+1];
+                ctx.beginPath();
+                ctx.moveTo(keypoints[firstJointIndex].x, keypoints[firstJointIndex].y);
+                ctx.lineTo(keypoints[secondJointIndex].x, keypoints[secondJointIndex].y);
+                ctx.stroke();   
+            }
+        } 
+    }
+
+    hands.forEach(hand =>{
+        drawHandPoints(hand);
+        drawAdjacentLines(hand);
+    })
+return
+    // Define adjacent points
+
+}
+
+function drawPose(poses, ctx) {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  drawKeypoints(pose.keypoints, ctx);
-  drawSkeleton(pose.keypoints, ctx);
+  poses.forEach(pose => {
+      drawKeypoints(pose.keypoints, ctx);
+      drawSkeleton(pose.keypoints, ctx);
+  });
 }
 
 function drawKeypoints(keypoints, ctx) {
+    console.log(keypoints);
   keypoints.forEach(keypoint => {
     if (keypoint.score > 0.5) {
       const { y, x } = keypoint.position;
