@@ -1,0 +1,29 @@
+.container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+@media (min-width: 768px) {
+    .container {
+        flex-direction: row;
+    }
+}
+
+.motionvideo {
+    position: relative; 
+}
+
+.motionvideo video#motion,
+.motionvideo canvas {
+    width: 100%;
+    height: auto;
+}
+
+.motionvideo canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
