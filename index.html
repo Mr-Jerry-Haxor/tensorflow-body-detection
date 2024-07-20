@@ -5,34 +5,86 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pose Tracking with WebRTC</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs" async></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/posenet" async></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection" async></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/facemesh"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" async></script>
   <script defer src="./script.js"></script>
+  <script defer src="./drawingUtilities.js"></script>
+  <script defer src="./facemeshTriangulation.js"></script>
 
   <link rel="stylesheet" href="./style.css">
 
 </head>
 
 <body onload="onBodyLoad()">
-  <nav>
-    <div class="toggle">
 
+  <section>
+    <nav>
+      <div class="toggler-container">
+        <label class="switch">
+          <input type="checkbox" onchange="toggleMainVideo(event)" />
+          <span class="slider">
+            <span class="title">Play</span>
+            <span class="ball">
+              <span class="icon">
+                <svg
+                  class="w-6 h-6 text-gray-800 dark:text-white"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="25"
+                  height="25"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8 18V6l8 6-8 6Z"
+                  ></path>
+                </svg>
+              </span>
+            </span>
+          </span>
+        </label>
+      </div>
+      
+      <input type="color" name="" id="">
+      <select id="detectionModel" onchange="changeModel(event)">
+      </select>
+    </nav>
+  
+    <div class="container">
+      <div class="mainvideo">
+        <div class="justify-center">
+          <video id="video" autoplay playsinline></video>
+        </div>
+      </div>
+      <div class="motionvideo">
+        <div class="justify-center">
+          <div class="video-canvas">
+            <video id="motion"></video>
+            <canvas id="sketch"></canvas>
+          </div>
+        </div>
+      </div>
     </div>
-    <select id="detectionModel" onchange="changeModel(event)">
-    </select>
-  </nav>
+  </section>
 
-  <div class="container">
-    <div class="mainvideo">
-      <video id="video" autoplay playsinline></video>
+  <div id="spinner">
+    <div class="orbit-spinner">
+      <div class="orbit"></div>
+      <div class="orbit"></div>
+      <div class="orbit"></div>
     </div>
-    <div class="motionvideo">
-      <video id="motion"></video>
-      <canvas id="sketch"></canvas>
-    </div>
+
+    <div class="loading">loading ... </div>
   </div>
+
 </body>
 
 </html>
