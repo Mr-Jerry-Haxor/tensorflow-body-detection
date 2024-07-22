@@ -5,12 +5,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pose Tracking with WebRTC</title>
+  <!-- Peer Deps -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core" async></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/facemesh" async></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" async></script>
+
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/posenet" async></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection" async></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/facemesh" async></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection" async></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" async></script>
+
   <script defer src="./script.js"></script>
   <script defer src="./drawingUtilities.js"></script>
   <script defer src="./facemeshTriangulation.js"></script>
@@ -23,54 +27,26 @@
 
   <section>
     <nav>
-      <div class="toggler-container">
-        <label class="switch">
-          <input type="checkbox" onchange="toggleMainVideo(event)" />
-          <span class="slider">
-            <span class="title">Play</span>
-            <span class="ball">
-              <span class="icon">
-                <svg
-                  class="w-6 h-6 text-gray-800 dark:text-white"
-                  aria-hidden="true"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="25"
-                  height="25"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M8 18V6l8 6-8 6Z"
-                  ></path>
-                </svg>
-              </span>
-            </span>
-          </span>
-        </label>
+      <div id="options">
       </div>
-      
-      <input type="color" name="" id="">
-      <select id="detectionModel" onchange="changeModel(event)">
-      </select>
+      <div class="color-input">
+        <Label for="dotColor">
+          <input type="color" id="dotColor" onchange="colorChanged(event, 'dot')" value="#FF0000"> 
+          <span>Dot Color</span>
+        </Label>
+
+
+        <Label for="lineColor">
+          <input type="color" id="lineColor" onchange="colorChanged(event, 'line')" value="#0000FF"> 
+          <span>Line Color</span>
+        </Label>
+      </div>
     </nav>
-  
+
     <div class="container">
-      <div class="mainvideo">
-        <div class="justify-center">
-          <video id="video" autoplay playsinline></video>
-        </div>
-      </div>
-      <div class="motionvideo">
-        <div class="justify-center">
-          <div class="video-canvas">
-            <video id="motion"></video>
-            <canvas id="sketch"></canvas>
-          </div>
-        </div>
+      <div class="video-canvas">
+        <video id="video" autoplay></video>
+        <canvas id="sketch"></canvas>
       </div>
     </div>
   </section>
@@ -85,6 +61,12 @@
     <div class="loading">loading ... </div>
   </div>
 
+  <div class="photo-button-container">
+    <div class="photo-button" onclick="saveAsPicture()">
+      <div class="circle"></div>
+      <div class="ring"></div>
+    </div>
+  </div>
 </body>
 
 </html>
