@@ -47,6 +47,7 @@ function checkboxChanged(event, modelId) {
   if (!event.target.checked && selectedModels.has(modelId)) {
     selectedModels.delete(modelId)
   }
+  console.log(selectedModels);
 }
 
 function changeModel(event) {
@@ -58,6 +59,14 @@ function hideLoader() {
 }
 
 async function setupVideoStream() {
+  // navigator.mediaDevices
+  // .enumerateDevices()
+  // .then((devices) => {
+  //   devices.forEach((device) => {
+  //     console.log(device);
+  //     console.log(`${device.kind}: ${device.label} id = ${device.deviceId}`);
+  //   });
+  // })
   try {
     const videoElement = document.getElementById("video");
     const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -105,19 +114,24 @@ async function detectPoseInRealTime(video, detectors) {
     if (selectedModels.has(Models.FaceLandMarkDetection)) {
       points.faces = await detectors.facemeshDetector.estimateFaces(video);
     }
+    else{
+      points.faces = null;
+    }
+    
     if (selectedModels.has(Models.HandPoseDetection)) {
       points.hands = await detectors.handPoseDetector.estimateHands(video);
     }
+    else{
+      points.hands = null;
+    }
+
     if (selectedModels.has(Models.PoseDetection)) {
       points.poses = await detectors.poseDetector.estimateMultiplePoses(video);
     }
-    if(selectedModels.size == 0){
-      points = {
-        poses: null,
-        hands: null,
-        faces: null
-      }
+    else{
+      points.poses = null;
     }
+
     drawPoints(points, ctx);
     requestAnimationFrame(poseDetectionFrame);
   }
@@ -151,6 +165,10 @@ function saveAsPicture() {
   // Create a link element and trigger a download
   const link = document.createElement('a');
   link.href = image;
+  var date = new Date();
+  console.log(date.toDateString());
+  console.log(date.toLocaleTimeString());
+  console.log(date.toString());
   link.download = 'screenshot.png';
   link.click();
 }
