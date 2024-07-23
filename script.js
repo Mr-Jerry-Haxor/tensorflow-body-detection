@@ -1,47 +1,71 @@
 const Models = Object.freeze({
-    PlainVideo: 0,
-    SimpleFaceDetection: 1,
-    FaceLandMarkDetection: 2,
-    PoseDetection: 3,
-    BodySegmentation: 4,
-    HandPoseDetection: 5,
-    PortraitDepthEstimation: 6,
+  FaceLandMarkDetection: 1,
+  PoseDetection: 2,
+  HandPoseDetection: 3,
 });
+let selectedModels = new Set();
+let points = {
+  poses: null,
+  hands: null,
+  faces: null
+};
 
-function onBodyLoad(){
-    addOptions();
+function onBodyLoad() {
+  addOptions();
 }
 
-let selectedModel = Models.PlainVideo;
+function addOptions() {
+  const optionsDiv = document.getElementById("options");
+  for (const [modelName, modelId] of Object.entries(Models)) {
+    const div = document.createElement('div');
+    div.classList.add('option')
 
-function addOptions(){
-    const select = document.getElementById("detectionModel"); 
-    for (const [key, value] of Object.entries(Models)) {
-        var option = document.createElement("option");
-        option.value = value;
-        option.innerText = key;
-        select.appendChild(option);
-    }
+    const label = document.createElement('label');
+    label.setAttribute('for', modelId);
+
+    const span = document.createElement("span");
+    span.innerText = modelName;
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.id = modelId;
+
+    checkbox.onchange = (event) => { checkboxChanged(event, modelId); }
+
+    label.appendChild(checkbox);
+    label.appendChild(span);
+    div.appendChild(label)
+
+    optionsDiv.appendChild(div);
+  }
 }
 
-function changeModel(event){
-    selectedModel = Number(event.target.value);
+function checkboxChanged(event, modelId) {
+  if (event.target.checked && !selectedModels.has(modelId)) {
+    selectedModels.add(modelId)
+  }
+  if (!event.target.checked && selectedModels.has(modelId)) {
+    selectedModels.delete(modelId)
+  }
 }
 
+function changeModel(event) {
+  selectedModels = Number(event.target.value);
+}
+
+function hideLoader() {
+  document.getElementById("spinner").style.display = 'none'
+}
 
 async function setupVideoStream() {
   try {
-    const mainvideo = document.getElementById("video");
-    const mainstream = await navigator.mediaDevices.getUserMedia({ video: true });
-
-    const videoelement = document.getElementById("motion");
-
-    mainvideo.srcObject = mainstream;
-    videoelement.srcObject = mainstream;
+    const videoElement = document.getElementById("video");
+    const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    videoElement.srcObject = videoStream;
 
     return new Promise((resolve) => {
-        videoelement.onloadedmetadata = () => {
-        resolve(videoelement);
+      videoElement.onloadedmetadata = () => {
+        resolve(videoElement);
       };
     });
   } catch (error) {
@@ -49,20 +73,24 @@ async function setupVideoStream() {
   }
 }
 
-async function loadPoseNet() {
-  const net = await posenet.load();
-  
+async function loadModels() {
+  const netPoseDetector = await posenet.load();
+
   const model = handPoseDetection.SupportedModels.MediaPipeHands;
   const detectorConfig = {
     runtime: 'mediapipe',
     solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands'
-                  // or 'base/node_modules/@mediapipe/hands' in npm.
   };
-  const detector = await handPoseDetection.createDetector(model, detectorConfig);
-  
+  const handPoseDetector = await handPoseDetection.createDetector(model, detectorConfig);
+
+  const facemeshDetector = await facemesh.load()
+
+  hideLoader();
+
   return {
-    posenet: net,
-    handPoseDetector: detector
+    poseDetector: netPoseDetector,
+    handPoseDetector: handPoseDetector,
+    facemeshDetector: facemeshDetector
   };
 }
 
@@ -74,120 +102,55 @@ async function detectPoseInRealTime(video, detectors) {
   video.height = canvas.height = video.videoHeight;
 
   async function poseDetectionFrame() {
-
-    switch(selectedModel){
-        case Models.PlainVideo:
-            break;
-        case Models.SimpleFaceDetection:
-            break;
-        case Models.FaceLandMarkDetection:
-            break;
-        case Models.PoseDetection:
-            const pose = await detectors.posenet.estimateMultiplePoses(video);
-            drawPose(pose, ctx);
-            break;
-        case Models.BodySegmentation:
-            break;
-        case Models.HandPoseDetection:
-            const handpose = await detectors.handPoseDetector.estimateHands(video);
-            console.log(handpose);
-            drawHands(handpose,ctx);
-            break;
-        case Models.PortraitDepthEstimation:
-            break;
+    if (selectedModels.has(Models.FaceLandMarkDetection)) {
+      points.faces = await detectors.facemeshDetector.estimateFaces(video);
     }
+    if (selectedModels.has(Models.HandPoseDetection)) {
+      points.hands = await detectors.handPoseDetector.estimateHands(video);
+    }
+    if (selectedModels.has(Models.PoseDetection)) {
+      points.poses = await detectors.poseDetector.estimateMultiplePoses(video);
+    }
+    if(selectedModels.size == 0){
+      points = {
+        poses: null,
+        hands: null,
+        faces: null
+      }
+    }
+    drawPoints(points, ctx);
     requestAnimationFrame(poseDetectionFrame);
   }
   poseDetectionFrame();
 }
 
-function drawHands(hands, ctx){
-
-    const fingerJoints = {
-        thumb: [0, 1, 2, 3, 4],
-        indexFinger: [0, 5, 6, 7, 8],
-        middleFinger: [0, 9, 10, 11, 12],
-        ringFinger: [0, 13, 14, 15, 16],
-        pinkyFinger: [0, 17, 18, 19, 20]
-    }
-
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
-    function drawHandPoints(hand){
-        ctx.fillStyle = 'red';
-        hand.keypoints.forEach(keypoints => {
-        ctx.beginPath();
-        ctx.arc(keypoints.x, keypoints.y, 5, 0, 2 * Math.PI);
-        ctx.fill();
-        });
-    }
-
-    function drawAdjacentLines(hand){
-          // Draw lines between adjacent points
-          const keypoints = hand.keypoints;
-          ctx.strokeStyle = 'blue';
-          ctx.lineWidth = 2;
-          for (const [key, value] of Object.entries(fingerJoints)) {
-            for (let k = 0; k < fingerJoints[key].length-1; k++) {
-                const firstJointIndex = fingerJoints[key][k];
-                const secondJointIndex = fingerJoints[key][k+1];
-                ctx.beginPath();
-                ctx.moveTo(keypoints[firstJointIndex].x, keypoints[firstJointIndex].y);
-                ctx.lineTo(keypoints[secondJointIndex].x, keypoints[secondJointIndex].y);
-                ctx.stroke();   
-            }
-        } 
-    }
-
-    hands.forEach(hand =>{
-        drawHandPoints(hand);
-        drawAdjacentLines(hand);
-    })
-return
-    // Define adjacent points
-
-}
-
-function drawPose(poses, ctx) {
-  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  poses.forEach(pose => {
-      drawKeypoints(pose.keypoints, ctx);
-      drawSkeleton(pose.keypoints, ctx);
-  });
-}
-
-function drawKeypoints(keypoints, ctx) {
-    console.log(keypoints);
-  keypoints.forEach(keypoint => {
-    if (keypoint.score > 0.5) {
-      const { y, x } = keypoint.position;
-      ctx.beginPath();
-      ctx.arc(x, y, 5, 0, 2 * Math.PI);
-      ctx.fillStyle = 'red';
-      ctx.fill();
-    }
-  });
-}
-
-function drawSkeleton(keypoints, ctx) {
-  const adjacentKeyPoints = posenet.getAdjacentKeyPoints(keypoints, 0.5);
-
-  adjacentKeyPoints.forEach(keypoints => {
-    const [from, to] = keypoints;
-    ctx.beginPath();
-    ctx.moveTo(from.position.x, from.position.y);
-    ctx.lineTo(to.position.x, to.position.y);
-    ctx.strokeStyle = 'red';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  });
-}
-
 async function main() {
   const video = await setupVideoStream();
-  const net = await loadPoseNet();
+  const net = await loadModels();
   video.play();
   detectPoseInRealTime(video, net);
 }
 
 main();
+
+function saveAsPicture() {
+  const video = document.getElementById("video");
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  ctx.drawImage(video, 0, 0);
+
+  // Redraw the lines on the canvas
+  drawPoints(points, ctx, false);
+
+  // Create an image from the canvas
+  const image = canvas.toDataURL('image/png');
+
+  // Create a link element and trigger a download
+  const link = document.createElement('a');
+  link.href = image;
+  link.download = 'screenshot.png';
+  link.click();
+}

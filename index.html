@@ -5,32 +5,66 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pose Tracking with WebRTC</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs" ></script>
+  <!-- Peer Deps -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core" async></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/facemesh" async></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" async></script>
+
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/posenet" async></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection" async></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" async></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection" async></script>
+
   <script defer src="./script.js"></script>
+  <script defer src="./drawingUtilities.js"></script>
+  <script defer src="./facemeshTriangulation.js"></script>
 
   <link rel="stylesheet" href="./style.css">
 
 </head>
 
 <body onload="onBodyLoad()">
-  <nav>
-    <div class="toggle">
 
-    </div>
-    <select id="detectionModel" onchange="changeModel(event)">
-    </select>
-  </nav>
+  <section>
+    <nav>
+      <div id="options">
+      </div>
+      <div class="color-input">
+        <Label for="dotColor">
+          <input type="color" id="dotColor" onchange="colorChanged(event, 'dot')" value="#FF0000"> 
+          <span>Dot Color</span>
+        </Label>
 
-  <div class="container">
-    <div class="mainvideo">
-      <video id="video" autoplay playsinline></video>
+
+        <Label for="lineColor">
+          <input type="color" id="lineColor" onchange="colorChanged(event, 'line')" value="#0000FF"> 
+          <span>Line Color</span>
+        </Label>
+      </div>
+    </nav>
+
+    <div class="container">
+      <div class="video-canvas">
+        <video id="video" autoplay></video>
+        <canvas id="sketch"></canvas>
+      </div>
     </div>
-    <div class="motionvideo">
-      <video id="motion"></video>
-      <canvas id="sketch"></canvas>
+  </section>
+
+  <div id="spinner">
+    <div class="orbit-spinner">
+      <div class="orbit"></div>
+      <div class="orbit"></div>
+      <div class="orbit"></div>
+    </div>
+
+    <div class="loading">loading ... </div>
+  </div>
+
+  <div class="photo-button-container">
+    <div class="photo-button" onclick="saveAsPicture()">
+      <div class="circle"></div>
+      <div class="ring"></div>
     </div>
   </div>
 </body>
